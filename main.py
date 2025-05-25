@@ -20,7 +20,7 @@ def search(request: QueryRequest):
     # Get embedding using OpenAI v1 client
     response = openai_client.embeddings.create(
         input=request.query,
-        model="text-embedding-ada-002"
+        model="text-embedding-3-small"
     )
     vector = response.data[0].embedding
 
