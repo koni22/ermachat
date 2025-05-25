@@ -1,33 +1,47 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import os
 from openai import OpenAI
 from pinecone import Pinecone
+import os
 
-# Initialize OpenAI with project + key
+# Print SDK version for debug
+import openai
+print("OpenAI SDK version:", openai.__version__)
+
+# Init OpenAI client with enforced project
 client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
-    project="proj_3VRKy2L0xtFsBDtizPISqqiK"  # Force correct project
+    project="proj_3VRKy2L0xtFsBDtizPISqqiK"  # Replace with yours if needed
 )
 
-# Pinecone setup
+# Init Pinecone
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-index = pc.Index("my-index")
+index = pc.Index("my-index")  # Replace with your actual index name
 
-# FastAPI setup
+# FastAPI app
 app = FastAPI()
 
+# Request model
 class QueryRequest(BaseModel):
     query: str
 
 @app.post("/search")
 def search(request: QueryRequest):
-    embedding_response = client.embeddings.create(
+    # Generate embedding
+    response = client.embeddings.create(
         input=request.query,
         model="text-embedding-3-small"
     )
-    vector = embedding_response.data[0].embedding
-    print("DEBUG: Vector length is", len(vector))  # Should print 384
+    vector = response.data[0].embedding
+    print("DEBUG: Vector length is", len(vector))  # Should be 384
 
-    result = index.query(vector=vector, top_k=5, include_metadata=True, namespace="__default__")
-    return {"results": [m["metadata"]["text"] for m in result["matches"] if "metadata" in m]}
+    # Query Pinecone
+    result = index.query(
+        vector=vector,
+        top_k=5,
+        include_metadata=True,
+        namespace="__default__"
+    )
+
+    # Return matched text
+    return {"results": [match["metadata"]["text"] for match in result["matches"] if "metadata" in match]}
