@@ -44,4 +44,12 @@ def search(request: QueryRequest):
     )
 
     # Return matched text
-    return {"results": [match["metadata"]["text"] for match in result["matches"] if "metadata" in match]}
+    return {
+    "results": [
+        {
+            "score": match.get("score"),
+            "metadata": match.get("metadata", {})
+        }
+        for match in result["matches"]
+    ]
+}
