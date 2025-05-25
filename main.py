@@ -4,12 +4,17 @@ import os
 from openai import OpenAI
 from pinecone import Pinecone
 
-# Initialize OpenAI and Pinecone clients
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-index = pc.Index("my-index")  # Replace with your actual index name
+# Initialize OpenAI with project + key
+client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    project="proj_3VRKy2L0xtFsBDtizPISqqiK"  # Force correct project
+)
 
-# Set up FastAPI
+# Pinecone setup
+pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+index = pc.Index("my-index")
+
+# FastAPI setup
 app = FastAPI()
 
 class QueryRequest(BaseModel):
@@ -17,14 +22,12 @@ class QueryRequest(BaseModel):
 
 @app.post("/search")
 def search(request: QueryRequest):
-    # Get embedding using OpenAI v1 client
-    response = openai_client.embeddings.create(
+    embedding_response = client.embeddings.create(
         input=request.query,
         model="text-embedding-3-small"
     )
-    vector = response.data[0].embedding
+    vector = embedding_response.data[0].embedding
+    print("DEBUG: Vector length is", len(vector))  # Should print 384
 
-    # Query Pinecone for relevant documents
     result = index.query(vector=vector, top_k=5, include_metadata=True, namespace="__default__")
-    matches = [m["metadata"]["text"] for m in result["matches"] if "metadata" in m]
-    return {"results": matches}
+    return {"results": [m["metadata"]["text"] for m in result["matches"] if "metadata" in m]}
